@@ -50,13 +50,79 @@ DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::Node
 DepthImageToLaserScanROS::~DepthImageToLaserScanROS(){
   sub_.shutdown();
 }
+void plot_image(char * name , cv::Mat map){
+  double min;
+  double max;
+  cv::minMaxIdx(map, &min, &max);
+  cv::Mat adjMap;
+  min=1<<4;
+  max=(1<<16)/10;
+  std::cout<<"min: "<<min<<"max: "<<max<<std::endl;
+  // expand your range to 0..255. Similar to histEq();
+  map.convertTo(adjMap,CV_8UC1, 255 / (max-min), -min); 
+
+  // this is great. It converts your grayscale image into a tone-mapped one, 
+  // much more pleasing for the eye
+  // function is found in contrib module, so include contrib.hpp 
+  // and link accordingly
+  cv::Mat falseColorsMap;
+  applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_HOT);
+
+  cv::imshow(name, falseColorsMap);
+
+}
+void filterDepth(cv::Mat input, cv::Mat &_output){
+  cv::Mat zeros = input*0;
+  // output= input;
+  cv::Mat output(cv::Size(input.cols,input.rows), CV_16UC1, (void*)input.data, cv::Mat::AUTO_STEP);
+  
+  std::cout<<output.rows<<' '<<output.cols<<std::endl;
+  
+  for(int i=0  ; i<2*output.rows; i+=1){
+    for(int j=0 ; j<output.cols; j++){
+      if(output.data[(output.cols*i + j)] <(1)){
+        output.data[(output.cols*i + j)] = 65535; //2**16
+        zeros.data[(output.cols*i + j)] = 1;
+      }
+    }
+  }
+
+  // for (int i = 0; i<output.rows; i++)
+  // for( int j =0 ; j<output.cols; j++){
+  //   if(output.data[(output.rows*j + i)] ==0){
+  //     output.data[(output.rows*j + i)] = 65535; //2**16
+  //     zeros.data[(output.rows*j + i)] = 1;
+  //   }
+  // }
+  
+  int morph_size =10;
+  cv::Mat element = cv::getStructuringElement( cv::MORPH_RECT,  cv::Size( 2*morph_size + 1, 10*morph_size+1 ), cv::Point(-1,-1));
+    cv::erode(output,output, element);
+    for (int i = 0; i<2*output.rows; i++)
+  for( int j =0 ; j<output.cols; j++){
+    if(zeros.data[(output.cols*i + j)]){
+      output.data[(output.cols*i + j)] = 0; //2**16
+    }
+  }  
+
+  _output = output;
 
 
+
+}
 
 void DepthImageToLaserScanROS::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
         const sensor_msgs::CameraInfoConstPtr& info_msg){
   try
   {
+    sensor_msgs::Image image_filtered = *depth_msg.get();
+    cv::Mat image = cv_bridge::toCvShare(depth_msg,image_filtered.encoding)->image;
+    plot_image("original", image);
+    filterDepth(image,image);
+
+
+    plot_image("filtered", image);
+    cv::waitKey(1);
     sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(depth_msg, info_msg);
     pub_.publish(scan_msg);
   }
@@ -71,7 +137,7 @@ void DepthImageToLaserScanROS::connectCb(const ros::SingleSubscriberPublisher& p
   if (!sub_ && pub_.getNumSubscribers() > 0) {
     ROS_DEBUG("Connecting to depth topic.");
     image_transport::TransportHints hints("raw", ros::TransportHints(), pnh_);
-    sub_ = it_.subscribeCamera("image", 10, &DepthImageToLaserScanROS::depthCb, this, hints);
+    sub_ = it_.subscribeCamera("oak/depth/image", 10, &DepthImageToLaserScanROS::depthCb, this, hints);
   }
 }
 

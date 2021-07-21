@@ -1,10 +1,10 @@
 # http://ros.org/doc/groovy/api/catkin/html/user_guide/supposed.html
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2 )
 project(depthimage_to_laserscan)
 
 # Load catkin and all dependencies required for this package
-find_package(catkin REQUIRED dynamic_reconfigure image_geometry image_transport nodelet roscpp sensor_msgs)
-#find_package(OpenCV REQUIRED)
+find_package(catkin REQUIRED dynamic_reconfigure image_geometry image_transport nodelet roscpp sensor_msgs cv_bridge)
+find_package(OpenCV 4 REQUIRED)
 
 # Dynamic reconfigure support
 generate_dynamic_reconfigure_options(cfg/Depth.cfg)
@@ -12,28 +12,29 @@ generate_dynamic_reconfigure_options(cfg/Depth.cfg)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES DepthImageToLaserScan DepthImageToLaserScanROS DepthImageToLaserScanNodelet
-  CATKIN_DEPENDS dynamic_reconfigure image_geometry image_transport nodelet roscpp sensor_msgs
+  CATKIN_DEPENDS dynamic_reconfigure image_geometry image_transport nodelet roscpp sensor_msgs cv_bridge
+  
 )
 
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS})
 
 add_library(DepthImageToLaserScan src/DepthImageToLaserScan.cpp)
-target_link_libraries(DepthImageToLaserScan ${catkin_LIBRARIES})
+target_link_libraries(DepthImageToLaserScan ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_library(DepthImageToLaserScanROS src/DepthImageToLaserScanROS.cpp)
 add_dependencies(DepthImageToLaserScanROS ${PROJECT_NAME}_gencfg)
-target_link_libraries(DepthImageToLaserScanROS DepthImageToLaserScan ${catkin_LIBRARIES})
+target_link_libraries(DepthImageToLaserScanROS DepthImageToLaserScan ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_library(DepthImageToLaserScanNodelet src/DepthImageToLaserScanNodelet.cpp)
-target_link_libraries(DepthImageToLaserScanNodelet DepthImageToLaserScanROS ${catkin_LIBRARIES})
+target_link_libraries(DepthImageToLaserScanNodelet DepthImageToLaserScanROS ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(depthimage_to_laserscan src/depthimage_to_laserscan.cpp)
-target_link_libraries(depthimage_to_laserscan DepthImageToLaserScanROS ${catkin_LIBRARIES})
+target_link_libraries(depthimage_to_laserscan DepthImageToLaserScanROS ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 if(CATKIN_ENABLE_TESTING)
   # Test the library
   catkin_add_gtest(libtest test/DepthImageToLaserScanTest.cpp)
-  target_link_libraries(libtest DepthImageToLaserScan ${catkin_LIBRARIES})
+  target_link_libraries(libtest DepthImageToLaserScan ${catkin_LIBRARIES} ${OPENCV_LIBS})
 endif()
 
 # add the test executable, keep it from being built by "make all"

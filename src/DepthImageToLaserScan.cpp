@@ -88,7 +88,9 @@ bool DepthImageToLaserScan::use_point(const float new_value, const float old_val
 sensor_msgs::LaserScanPtr DepthImageToLaserScan::convert_msg(const sensor_msgs::ImageConstPtr& depth_msg,
         const sensor_msgs::CameraInfoConstPtr& info_msg){
   // Set camera model
+  
   cam_model_.fromCameraInfo(info_msg);
+ 
 
   // Calculate angle_min and angle_max by measuring angles between the left ray, right ray, and optical center ray
   cv::Point2d raw_pixel_left(0, cam_model_.cy());
