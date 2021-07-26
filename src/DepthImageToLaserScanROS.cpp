@@ -117,13 +117,21 @@ void DepthImageToLaserScanROS::depthCb(const sensor_msgs::ImageConstPtr& depth_m
   {
     sensor_msgs::Image image_filtered = *depth_msg.get();
     cv::Mat image = cv_bridge::toCvShare(depth_msg,image_filtered.encoding)->image;
-    plot_image("original", image);
+    // plot_image("original", image);
     filterDepth(image,image);
+    // flip image upside-down
 
+    // plot_image("filtered", image);
+    cv::flip(image,image,-1);
 
-    plot_image("filtered", image);
-    cv::waitKey(1);
-    sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(depth_msg, info_msg);
+    // plot_image("flipped", image);
+    // create a sensor msgs::Image from the cv::Mat
+    sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(image_filtered.header, image_filtered.encoding, image).toImageMsg();
+
+    // cv::waitKey(1);
+
+    // sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(depth_msg, info_msg);
+    sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(image_msg, info_msg);
     pub_.publish(scan_msg);
   }
   catch (std::runtime_error& e)
