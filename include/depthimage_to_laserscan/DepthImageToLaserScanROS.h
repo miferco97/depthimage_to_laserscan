@@ -104,8 +104,10 @@ namespace depthimage_to_laserscan
     dynamic_reconfigure::Server<depthimage_to_laserscan::DepthConfig> srv_; ///< Dynamic reconfigure server
 
     depthimage_to_laserscan::DepthImageToLaserScan dtl_; ///< Instance of the DepthImageToLaserScan conversion class.
-
+    
     boost::mutex connect_mutex_; ///< Prevents the connectCb and disconnectCb from being called until everything is initialized.
+
+    bool filter_sensor_; ///< Whether or not to filter the sensor data.
   };
 
 

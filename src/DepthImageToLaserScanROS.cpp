@@ -31,6 +31,7 @@
  * Author: Chad Rockey
  */
 
+#include <boost/core/enable_if.hpp>
 #include <depthimage_to_laserscan/DepthImageToLaserScanROS.h>
 
 using namespace depthimage_to_laserscan;
@@ -45,6 +46,9 @@ DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::Node
 
   // Lazy subscription to depth image topic
   pub_ = n.advertise<sensor_msgs::LaserScan>("scan", 10, boost::bind(&DepthImageToLaserScanROS::connectCb, this, _1), boost::bind(&DepthImageToLaserScanROS::disconnectCb, this, _1));
+
+  n.getParam("depthimage_to_laserscan/filter_sensor", filter_sensor_);
+  std::cout << "Filter measurements from sensor: " << filter_sensor_ << std::endl;
 }
 
 DepthImageToLaserScanROS::~DepthImageToLaserScanROS(){
@@ -81,7 +85,7 @@ void filterDepth(cv::Mat input, cv::Mat &_output){
   for(int i=0  ; i<2*output.rows; i+=1){
     for(int j=0 ; j<output.cols; j++){
       if(output.data[(output.cols*i + j)] <(1)){
-        output.data[(output.cols*i + j)] = 65535; //2**16
+        output.data[(output.cols*i + j)] = 255; //65535; //2**16
         zeros.data[(output.cols*i + j)] = 1;
       }
     }
@@ -104,34 +108,35 @@ void filterDepth(cv::Mat input, cv::Mat &_output){
       output.data[(output.cols*i + j)] = 0; //2**16
     }
   }  
-
   _output = output;
-
-
-
 }
 
 void DepthImageToLaserScanROS::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
         const sensor_msgs::CameraInfoConstPtr& info_msg){
   try
   {
+    sensor_msgs::LaserScan scan_msg;
+    if (filter_sensor_)
+    {
     sensor_msgs::Image image_filtered = *depth_msg.get();
     cv::Mat image = cv_bridge::toCvShare(depth_msg,image_filtered.encoding)->image;
-    // plot_image("original", image);
+    plot_image("original", image);
+
     filterDepth(image,image);
+    plot_image("filtered", image);
+    
     // flip image upside-down
-
-    // plot_image("filtered", image);
-    cv::flip(image,image,-1);
-
+    // cv::flip(image,image,-1);
     // plot_image("flipped", image);
+   
     // create a sensor msgs::Image from the cv::Mat
     sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(image_filtered.header, image_filtered.encoding, image).toImageMsg();
-
-    // cv::waitKey(1);
-
-    // sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(depth_msg, info_msg);
-    sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(image_msg, info_msg);
+    cv::waitKey(1);
+    scan_msg = *dtl_.convert_msg(image_msg, info_msg).get();
+    }
+    else {
+      scan_msg = *dtl_.convert_msg(depth_msg, info_msg).get();
+    }
     pub_.publish(scan_msg);
   }
   catch (std::runtime_error& e)
