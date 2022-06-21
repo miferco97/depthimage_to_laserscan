@@ -72,7 +72,7 @@ void plot_image(char * name , cv::Mat map){
   cv::Mat falseColorsMap;
   applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_HOT);
 
-  cv::imshow(name, falseColorsMap);
+  // cv::imshow(name, falseColorsMap);
 
 }
 void filterDepth(cv::Mat input, cv::Mat &_output){
@@ -120,10 +120,9 @@ void DepthImageToLaserScanROS::depthCb(const sensor_msgs::ImageConstPtr& depth_m
     {
     sensor_msgs::Image image_filtered = *depth_msg.get();
     cv::Mat image = cv_bridge::toCvShare(depth_msg,image_filtered.encoding)->image;
-    plot_image("original", image);
-
+    // plot_image("original", image);
     filterDepth(image,image);
-    plot_image("filtered", image);
+    // plot_image("filtered", image);
     
     // flip image upside-down
     // cv::flip(image,image,-1);
