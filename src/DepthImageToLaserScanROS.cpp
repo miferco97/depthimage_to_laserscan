@@ -129,6 +129,9 @@ void DepthImageToLaserScanROS::depthCb(const sensor_msgs::ImageConstPtr& depth_m
     // plot_image("flipped", image);
    
     // create a sensor msgs::Image from the cv::Mat
+    image_filtered.header.frame_id = "red/camera_depth_frame";
+    dtl_.set_output_frame(image_filtered.header.frame_id);
+
     sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(image_filtered.header, image_filtered.encoding, image).toImageMsg();
     cv::waitKey(1);
     scan_msg = *dtl_.convert_msg(image_msg, info_msg).get();
